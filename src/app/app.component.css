@@ -1,0 +1,15 @@
+p {
+  font-family: Lato;
+}
+
+.red {
+  width: 30%;
+  height: 20%;
+  background-color: red;
+}
+
+.green {
+  width: 80%;
+  height: 100%;
+  background-color: green;
+}
