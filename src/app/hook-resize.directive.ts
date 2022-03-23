@@ -4,8 +4,8 @@ import {
   EventEmitter,
   Inject,
   Input,
+  OnDestroy,
   Output,
-  Renderer2,
 } from '@angular/core';
 import type { AfterViewInit } from '@angular/core';
 
@@ -15,84 +15,80 @@ import type { AfterViewInit } from '@angular/core';
 @Directive({
   selector: '[hookResize]',
 })
-export class HookResizeDirective implements AfterViewInit {
+export class HookResizeDirective implements AfterViewInit, OnDestroy {
   /**
    * An optional CSS query to select an HTML element within the host element
    */
-  @Input() public set query(value: string) {
-    this._query = value;
+  @Input() public set hookResize(value: string | string[] | null) {
+    this.queries = value;
     // Hook only if the component has been initialised,
     // i.e. ngAfterViewInit has already passed
-    if(this.parent && this.iframe) {
+    if (this.el) {
       this.hook();
     }
   }
-  public get query(): string {
-    return this._query;
+  public get hookResize(): string | string[] | null {
+    return this.queries;
   }
 
   /**
    * This event will be emitted when a resize event occurs
    */
-  @Output() public readonly resize = new EventEmitter<HTMLElement>();
+  @Output() public readonly resize = new EventEmitter<ResizeObserverEntry>();
 
-  private _query: string;
-  private parent: HTMLElement;
-  private iframe: HTMLIFrameElement;
+  private queries: string | string[] | null;
+  private observer: ResizeObserver;
+  private prvQueries: string[] = [];
 
   public constructor(
-    @Inject(ElementRef) private readonly el: ElementRef<HTMLElement>,
-    @Inject(Renderer2) private readonly renderer2: Renderer2
-  ) {}
+    @Inject(ElementRef) private readonly el: ElementRef<Element>
+  ) {
+    this.observer = new ResizeObserver((entries: ResizeObserverEntry[]) =>
+      entries.forEach((e) => this.resize.emit(e))
+    );
+  }
 
   public ngAfterViewInit(): void {
     this.hook();
   }
 
-  private hook(): void {
-    this.parent = this.query ?
-      this.el.nativeElement.querySelector<HTMLElement>(this.query) :
-      this.el.nativeElement;
-    if(!this.parent) {
-      throw new Error('HookResizeDirective: parent not found');
-    }
-    new ResizeObserver((entries: ResizeObserverEntry[], observer: ResizeObserver) => {
-      console.log('RO', entries, observer);
-      this.resize.emit(this.parent);
-    }).observe(this.parent);
+  public ngOnDestroy(): void {
+    this.observer.disconnect();
   }
 
-  private hook2(): void {
-    // If we have created an iframe, it has to be deleted first
-    if(this.parent && this.iframe) {
-      this.renderer2.removeChild(this.parent, this.iframe);
+  private hook(): void {
+    if (!this.el) {
+      throw new Error('HookResizeDirective: host not found.');
     }
-    // Here we need to find the parent
-    this.parent = this.query ?
-      this.el.nativeElement.querySelector<HTMLElement>(this.query) :
-      this.el.nativeElement;
-    if(!this.parent) {
-      throw new Error('HookResizeDirective: parent not found');
-    }
-    // Create the iframe ...
-    this.iframe = this.renderer2.createElement('iframe');
-    this.renderer2.setStyle(this.iframe, 'position', 'absolute');
-    this.renderer2.setStyle(this.iframe, 'width', '100%');
-    this.renderer2.setStyle(this.iframe, 'height', '100%');
-    this.renderer2.setStyle(this.iframe, 'background-color', 'transparent');
-    this.renderer2.setStyle(this.iframe, 'margin', '0');
-    this.renderer2.setStyle(this.iframe, 'padding', '0');
-    this.renderer2.setStyle(this.iframe, 'border-width', '0');
-    this.renderer2.setStyle(this.iframe, 'overflow', 'hidden');
-    this.renderer2.listen(this.iframe, 'load', () => {
-      // Here we listen to the content window resize event.
-      // Since the iframe has width and height 100%, its size will
-      // follow the parent size. This allows to detect the parent resize.
-      this.renderer2.listen(this.iframe.contentWindow, 'resize', () => {
-        this.resize.emit(this.parent);
-      });
+    // Map to array
+    const allQueries = Array.isArray(this.queries)
+      ? this.queries
+      : [this.queries];
+    // Make distinctive
+    const queries = allQueries.map(q => q ? q : '').filter((v, i, a) => i === a.indexOf(v));
+    // Unobserve
+    this.prvQueries.filter(pq => !queries.some(q => q === pq)).forEach(pq => {
+      const element = this.getElement(pq);
+      if(element) {
+        this.observer.unobserve(element);
+      } else {
+        console.warn(`HookResizeDirective: not found element for "${pq}". Cannot unobserve.`);
+      }
     });
-    // ... and add it as a child to the parent
-    this.renderer2.appendChild(this.parent, this.iframe);
+    // Observe
+    queries.filter(q => !this.prvQueries.some(pq => pq === q)).forEach((q) => {
+      const element = this.getElement(q);
+      if (!element) {
+        console.warn(`HookResizeDirective: not found element for "${q}". Cannot observe.`);
+      } else {
+        this.observer.observe(element);
+      }
+    });
+    // Save previous queries
+    this.prvQueries = queries;
+  }
+
+  private getElement(query: string): Element {
+    return query ? this.el.nativeElement.querySelector(query) : this.el.nativeElement;
   }
 }

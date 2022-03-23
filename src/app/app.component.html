@@ -1,6 +1,10 @@
 <hello name="{{ name }}"></hello>
-<div class="red" hookResize [query]="query" (resize)="resize($event)">
-  <div class="green">
-    {{ size }}
-  </div>
+<p class="info">{{ query }}</p>
+<p class="info">{{ wrapperSize }}</p>
+<p class="info">{{ ta1Size }}</p>
+<p class="info">{{ ta2Size }}</p>
+<div id="wrapper" [hookResize]="query" (resize)="resize($event)">
+  <textarea id="ta1">Resize me</textarea>
+  <textarea id="ta2">Resize me too</textarea>
 </div>
+<button (click)="changeQuery()">Change query</button>

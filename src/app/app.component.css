@@ -1,15 +1,16 @@
-p {
-  font-family: Lato;
-}
-
-.red {
-  width: 30%;
-  height: 20%;
-  background-color: red;
-}
-
-.green {
-  width: 80%;
-  height: 100%;
+.info {
   background-color: green;
+  padding: .5em;
+}
+
+#wrapper {
+  display: flex;
+  gap: 16px;
+  width: fit-content;
+  background-color: lightblue;
+  padding: 16px;
+}
+
+button {
+  margin-top: 16px;
 }

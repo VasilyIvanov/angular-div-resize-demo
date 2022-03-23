@@ -8,22 +8,32 @@ import type { OnInit } from '@angular/core';
 })
 export class AppComponent implements OnInit {
   public name = 'Angular ' + VERSION.major;
-  public query = '.green';
-  public size: string;
+  public wrapperSize: string = '?';
+  public ta1Size: string = '?';
+  public ta2Size: string = '?';
+
+  public query = ['', '#ta1', '.aaa', '#bbb'];
 
   public constructor(
-    @Inject(ChangeDetectorRef) private readonly cdr: ChangeDetectorRef,
+    @Inject(ChangeDetectorRef) private readonly cdr: ChangeDetectorRef
   ) {}
 
-  public ngOnInit(): void {
-    // setInterval(() => {
-    //   this.query = this.query ? null : '.green';
-    // }, 1000);
+  public ngOnInit(): void {}
+
+  public resize(event: ResizeObserverEntry): void {
+    this[
+      `${event.target.id}Size`
+    ] = `${event.target.id}: ${event.contentRect.width} x ${event.contentRect.height}`;
+    console.log('RESIZE', event);
+    this.cdr.detectChanges();
   }
 
-  public resize(event: HTMLElement): void {
-    this.size = `${event.offsetWidth}x${event.offsetHeight}`;
-    console.log('RESIZE', this.size);
-    this.cdr.detectChanges();
+  public changeQuery(): void {
+    if(this.query.some(q => q === '#ta2')) {
+      this.query = ['', '#ta1', '.aaa', '#bbb'];
+      this.ta2Size = '?';
+    } else {
+      this.query = ['', '#ta1', '#ta2'];
+    }
   }
 }
