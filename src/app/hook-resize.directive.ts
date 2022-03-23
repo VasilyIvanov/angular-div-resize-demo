@@ -50,6 +50,19 @@ export class HookResizeDirective implements AfterViewInit {
   }
 
   private hook(): void {
+    this.parent = this.query ?
+      this.el.nativeElement.querySelector<HTMLElement>(this.query) :
+      this.el.nativeElement;
+    if(!this.parent) {
+      throw new Error('HookResizeDirective: parent not found');
+    }
+    new ResizeObserver((entries: ResizeObserverEntry[], observer: ResizeObserver) => {
+      console.log('RO', entries, observer);
+      this.resize.emit(this.parent);
+    }).observe(this.parent);
+  }
+
+  private hook2(): void {
     // If we have created an iframe, it has to be deleted first
     if(this.parent && this.iframe) {
       this.renderer2.removeChild(this.parent, this.iframe);
